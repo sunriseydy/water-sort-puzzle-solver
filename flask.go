@@ -16,7 +16,7 @@ const (
 	colorNone Color = 0
 
 	// invalidColor is an invalid Color
-	invalidColor Color = ';'
+	invalidColor Color = ','
 
 	// waterPiecesPerFlask must be > 0.
 	waterPiecesPerFlask = 4

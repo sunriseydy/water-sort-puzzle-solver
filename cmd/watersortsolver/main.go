@@ -1,30 +1,39 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
-
 	watersortpuzzle "github.com/pkositsyn/water-sort-puzzle-solver"
+	"net/http"
 )
 
 var algorithmType = flag.String("algorithm", "astar",
 	`Algorithm to solve with. Choices: [astar, idastar, dijkstra]`)
 
+type Result struct {
+	Message string                 `json:"message"`
+	Step    int                    `json:"step"`
+	Steps   []watersortpuzzle.Step `json:"steps"`
+}
+
 func main() {
 	flag.Parse()
-	fmt.Println("Input initial puzzle state")
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		s := r.URL.Query().Get("s")
+		if s == "" {
+			result := Result{
+				Message: "s query param is empty",
+			}
+			json.NewEncoder(w).Encode(result)
+		} else {
+			solve(r.URL.Query().Get("s"), w)
+		}
+	})
+	http.ListenAndServe(":9280", nil)
+}
 
-	var initialStateStr string
-	n, err := fmt.Scanln(&initialStateStr)
-	if err != nil {
-		fmt.Printf("Error getting input: %s\n", err.Error())
-		return
-	}
-	if n != 1 {
-		fmt.Printf("Scanned %d values but needed one position\n", n)
-		return
-	}
-
+func solve(s string, w http.ResponseWriter) {
 	var solver watersortpuzzle.Solver
 	switch *algorithmType {
 	case "astar":
@@ -36,15 +45,25 @@ func main() {
 	}
 
 	var initialState watersortpuzzle.State
-	if err := initialState.FromString(initialStateStr); err != nil {
-		fmt.Printf("Invalid puzzle state provided: %s\n", err.Error())
+	message := ""
+	if err := initialState.FromString(s); err != nil {
+		message = fmt.Sprintf("Invalid puzzle state provided: %s", err.Error())
+		result := Result{
+			Message: message,
+		}
+		json.NewEncoder(w).Encode(result)
 		return
 	}
 
 	steps, err := solver.Solve(initialState)
 	if err != nil {
-		fmt.Printf("Cannot solve puzzle: %s\n", err.Error())
+		message = fmt.Sprintf("Cannot solve puzzle: %s", err.Error())
+		result := Result{
+			Message: message,
+		}
+		json.NewEncoder(w).Encode(result)
 		return
+
 	}
 
 	suffix := ""
@@ -52,8 +71,16 @@ func main() {
 		suffix = fmt.Sprintf(" Algorithm took %d iterations to find solution.", statsSolver.Stats().Steps)
 	}
 
-	fmt.Printf("Puzzle solved in %d steps!%s\n", len(steps), suffix)
-	for _, step := range steps {
-		fmt.Println(step.From+1, step.To+1)
+	message = fmt.Sprintf("Puzzle solved in %d steps!%s", len(steps), suffix)
+
+	//for _, step := range steps {
+	//	fmt.Println(step.From+1, step.To+1)
+	//}
+
+	result := Result{
+		Message: message,
+		Step:    len(steps),
+		Steps:   steps,
 	}
+	json.NewEncoder(w).Encode(result)
 }

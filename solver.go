@@ -7,7 +7,8 @@ import (
 )
 
 type Step struct {
-	From, To int
+	From int `json:"from"`
+	To   int `json:"to"`
 }
 
 type Solver interface {

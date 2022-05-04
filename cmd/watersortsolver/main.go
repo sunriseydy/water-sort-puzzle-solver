@@ -1,10 +1,10 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	watersortpuzzle "github.com/pkositsyn/water-sort-puzzle-solver"
+	"html/template"
 	"net/http"
 )
 
@@ -12,28 +12,36 @@ var algorithmType = flag.String("algorithm", "astar",
 	`Algorithm to solve with. Choices: [astar, idastar, dijkstra]`)
 
 type Result struct {
-	Message string                 `json:"message"`
-	Step    int                    `json:"step"`
-	Steps   []watersortpuzzle.Step `json:"steps"`
+	Success bool
+	Message string
+	Step    int
+	Steps   []watersortpuzzle.Step
 }
 
 func main() {
 	flag.Parse()
+	tmpl := template.Must(template.ParseFiles("form.html"))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		s := r.URL.Query().Get("s")
+		if r.Method != http.MethodPost {
+			tmpl.Execute(w, nil)
+			return
+		}
+		s := r.FormValue("str")
 		if s == "" {
 			result := Result{
+				Success: false,
 				Message: "s query param is empty",
 			}
-			json.NewEncoder(w).Encode(result)
+			tmpl.Execute(w, result)
 		} else {
-			solve(r.URL.Query().Get("s"), w)
+			result := solve(s)
+			tmpl.Execute(w, result)
 		}
 	})
 	http.ListenAndServe(":9280", nil)
 }
 
-func solve(s string, w http.ResponseWriter) {
+func solve(s string) Result {
 	var solver watersortpuzzle.Solver
 	switch *algorithmType {
 	case "astar":
@@ -49,20 +57,20 @@ func solve(s string, w http.ResponseWriter) {
 	if err := initialState.FromString(s); err != nil {
 		message = fmt.Sprintf("Invalid puzzle state provided: %s", err.Error())
 		result := Result{
+			Success: false,
 			Message: message,
 		}
-		json.NewEncoder(w).Encode(result)
-		return
+		return result
 	}
 
 	steps, err := solver.Solve(initialState)
 	if err != nil {
 		message = fmt.Sprintf("Cannot solve puzzle: %s", err.Error())
 		result := Result{
+			Success: false,
 			Message: message,
 		}
-		json.NewEncoder(w).Encode(result)
-		return
+		return result
 
 	}
 
@@ -81,6 +89,7 @@ func solve(s string, w http.ResponseWriter) {
 		Message: message,
 		Step:    len(steps),
 		Steps:   steps,
+		Success: true,
 	}
-	json.NewEncoder(w).Encode(result)
+	return result
 }

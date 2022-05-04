@@ -1,0 +1,15 @@
+<!-- forms.html -->
+{{if .Success}}
+<p>{{ .Message}}</p>
+<ul>
+    {{range .Steps}}
+    <li>{{.From}},{{.To}}</li>
+    {{end}}
+</ul>
+{{else}}
+<p>please input:</p>
+<form method="POST">
+    <textarea name="str" placeholder="like: GRAB,YPAA,YDPF,ORDF,AYPS,XPOS,FXGX,XSDP,FRGY,ODPB,RBPB,PGSO,,"></textarea><br />
+    <input type="submit">
+</form>
+{{end}}

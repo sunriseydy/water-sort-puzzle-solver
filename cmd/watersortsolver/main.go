@@ -81,14 +81,16 @@ func solve(s string) Result {
 
 	message = fmt.Sprintf("Puzzle solved in %d steps!%s", len(steps), suffix)
 
-	//for _, step := range steps {
-	//	fmt.Println(step.From+1, step.To+1)
-	//}
+	var st []watersortpuzzle.Step
+
+	for _, step := range steps {
+		st = append(st, watersortpuzzle.Step{From: step.From + 1, To: step.To + 1})
+	}
 
 	result := Result{
 		Message: message,
 		Step:    len(steps),
-		Steps:   steps,
+		Steps:   st,
 		Success: true,
 	}
 	return result
